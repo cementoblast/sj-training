@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      # 1. 檢出程式碼、安裝套件
+      # 1. 安裝
       - name: Checkout Code
         uses: actions/checkout@v4
       - name: Install uv
-        uses: astral-sh/setup-uv@v5   # 官方 uv action，最方便
+        uses: astral-sh/setup-uv@v5
       - name: Setup Python
         run: uv python install 3.12
       - name: Install dependencies
@@ -32,10 +32,9 @@ jobs:
             numpy \
             requests \
             dropbox
-      # 2. 執行交易腳本 (核心部分)
+      # 2. 執行
       - name: Run Shioaji Script
         env:
-          # 將 GitHub Secrets 對應到 Python 能讀取的環境變數
           SJ_API_KEY: ${{ secrets.SJ_API_KEY }}
           SJ_SECRET_KEY: ${{ secrets.SJ_SECRET_KEY }}
           SJ_CERT_BASE64: ${{ secrets.SJ_CERT_BASE64 }}
