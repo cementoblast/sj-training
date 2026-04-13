@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      # 1. 安裝
       - name: Checkout Code
         uses: actions/checkout@v4
       - name: Install uv
@@ -32,7 +31,6 @@ jobs:
             numpy \
             requests \
             dropbox
-      # 2. 執行
       - name: Run Shioaji Script
         env:
           SJ_API_KEY: ${{ secrets.SJ_API_KEY }}
