@@ -1,0 +1,53 @@
+name: sj Auto Training Daily
+
+# 設定執行觸發條件
+on:
+  schedule:
+    # 這裡使用 UTC 時間。台灣時間 (UTC+8) 早上 08:30
+    # 等於 UTC 時間 00:30。
+    # 語法：分 時 日 月 週 (1-6 代表週一至週六，周六要爬蟲前一天的Nasdaq composite指數收盤數據)
+    - cron: '30 0 * * 1-6'
+
+  # 允許手動點擊執行 (方便測試)
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trading_job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      # 1. 檢出程式碼、安裝套件
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5   # 官方 uv action，最方便
+      - name: Setup Python
+        run: uv python install 3.12
+      - name: Install dependencies
+        run:
+            uv pip install --system \
+            "shioaji[speed]" \
+            pandas \
+            numpy \
+            requests \
+            dropbox
+      # 2. 執行交易腳本 (核心部分)
+      - name: Run Shioaji Script
+        env:
+          # 將 GitHub Secrets 對應到 Python 能讀取的環境變數
+          SJ_API_KEY: ${{ secrets.SJ_API_KEY }}
+          SJ_SECRET_KEY: ${{ secrets.SJ_SECRET_KEY }}
+          SJ_CERT_BASE64: ${{ secrets.SJ_CERT_BASE64 }}
+          SJ_CERT_PASSWORD: ${{ secrets.SJ_CERT_PASSWORD }}
+          SJ_ID: ${{ secrets.SJ_ID }}
+          SJ_PASSWORD: ${{ secrets.SJ_PASSWORD }}
+          APP_PWD: ${{ secrets.APP_PWD }}
+          DBX_K: ${{ secrets.DBX_K }}
+          DBX_REFRESH: ${{ secrets.DBX_REFRESH }}
+          DBX_SCRT: ${{ secrets.DBX_SCRT }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          USER: ${{ secrets.USER }}
+          USER2: ${{ secrets.USER2 }}
+        run: uv run --no-project python trainmodel.py
