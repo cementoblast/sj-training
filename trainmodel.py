@@ -1,4 +1,4 @@
-from os import environ, getenv, getcwd, path, remove
+from os import getenv, getcwd, path, remove
 from sys import path, exit
 from decimal import Decimal
 from time import sleep
@@ -28,13 +28,13 @@ logger = logging.getLogger(__name__)
 
 set_option('display.max_rows', None)
 def SendMail(contents):
-    from_address, to_address = getenv['USER'], [getenv['USER'], getenv['USER2']]
+    from_address, to_address = getenv('USER'), [getenv('USER'), getenv('USER2')]
     mail = MIMEMultipart()
     mail["From"], mail['To'], mail['Subject'] = from_address, ", ".join(to_address), "API通知"
     mail.attach(MIMEText(contents))
     smtpserver = smtplib.SMTP_SSL("smtp.gmail.com", 465)
     smtpserver.ehlo()
-    smtpserver.login(from_address, getenv['APP_PWD'])
+    smtpserver.login(from_address, getenv('APP_PWD'))
     smtpserver.sendmail(from_address, to_address, mail.as_string())
     smtpserver.quit()
 def etf_chg_pr(pr: Decimal, chg: Decimal):
@@ -197,9 +197,9 @@ def train(date_tdy, tz_):
         else:
             print('NQ: No data to update')
             return nq_df
-    dbx = Dropbox(app_key=getenv['DBX_K'],
-                app_secret=getenv['DBX_SCRT'],
-                oauth2_refresh_token=getenv['DBX_REFRESH'])
+    dbx = Dropbox(app_key=getenv('DBX_K'),
+                app_secret=getenv('DBX_SCRT'),
+                oauth2_refresh_token=getenv('DBX_REFRESH'))
     try:
         dbx.users_get_current_account()
     except AuthError:
@@ -299,6 +299,7 @@ def train(date_tdy, tz_):
                 print('Log out')
             else:
                 print("Not open")
+        remove(pfx_path)
     else:
         print(f"Bias 55 is about {round(bias55 * 100, 2)}%, no need for real-time monitoring")
 class Trader:
