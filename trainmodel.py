@@ -63,15 +63,12 @@ def get_monthly_first_dates(first_date_str: str, today_str: str) -> list:
     輸入起始日與結束日字串 (格式 YYYYMMDD)，
     回傳期間內每個月第一天的 YYYYMMDD 字串列表。
     """
-    # 1. 將字串轉換為 datetime 物件，確保 pandas 能進行運算
+    #將字串轉換為 datetime 物件，確保 pandas 能進行運算
     start = to_datetime(first_date_str)
     end = to_datetime(today_str)
-    # 2. 如果起始日晚於結束日，回傳空列表（防錯機制）
-    if start > end:
-        return []
-    # 3. 產生日期範圍，頻率為 'MS' (Month Start)
+    #產生日期範圍，頻率為 'MS' (Month Start)
     date_series = date_range(start=start, end=end, freq='MS')
-    # 4. 轉換回指定的字串格式並轉為 list
+    #轉換回指定的字串格式並轉為 list
     return date_series.strftime('%Y%m%d').tolist()
 def convert_to_monthly_df(input_df: DataFrame) -> DataFrame:
     input_df['date'] = to_datetime(input_df['date'])
@@ -504,7 +501,7 @@ stk_code = '00675L'
 hd = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36"}
 if __name__ == "__main__":
     tz_ = timezone(timedelta(hours=8))
-    date_tdy = datetime.now(tz = tz_)
+    date_tdy = datetime.now()
     print(date_tdy)
     print('Start training model')
     train(date_tdy, tz_)
