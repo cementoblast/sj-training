@@ -1,5 +1,5 @@
-from os import getenv, getcwd, path, remove
-from sys import path, exit
+from os import getenv, remove
+from sys import exit
 from decimal import Decimal
 from time import sleep
 from math import floor
@@ -208,7 +208,7 @@ def train(date_tdy, tz_):
     codes_dict, index_code_lt, tw_new_data = dict(), ['1000', 'nq'], []
     for index_code in index_code_lt:
         dbx_pname = f"/p{index_code}.csv"
-        codes_dict[index_code] = {'dbx': dbx_pname, 'local': path.join(getcwd(), f"p{index_code}.csv")}
+        codes_dict[index_code] = {'dbx': dbx_pname, 'local': f"p{index_code}.csv"}
         index_df = read_csv(download_data(dbx, codes_dict[index_code]['local'], codes_dict[index_code]['dbx']), parse_dates=['date'])
         codes_dict[index_code]['df'] = index_df
         index_df['date'] = to_datetime(index_df['date'])
