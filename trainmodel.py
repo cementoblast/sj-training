@@ -207,12 +207,14 @@ def train(date_tdy, tz_):
         dbx_pname = f"/p{index_code}.csv"
         codes_dict[index_code] = {'dbx': dbx_pname, 'local': f"p{index_code}.csv"}
         index_df = read_csv(download_data(dbx, codes_dict[index_code]['local'], codes_dict[index_code]['dbx']), parse_dates=['date'])
-        codes_dict[index_code]['df'] = index_df
         index_df['date'] = to_datetime(index_df['date'])
         index_df = index_df.sort_values(by = 'date').reset_index(drop = True)
         last_date = index_df['date'].max()
         codes_dict[index_code]['last_date'] = last_date
-    tw_new_dates_lt = get_monthly_first_dates(f"{last_date.strftime('%Y%m')}01", date_tdy)
+        codes_dict[index_code]['df'] = index_df
+
+    tw_all_df = codes_dict['1000']['df'].copy()
+    tw_new_dates_lt = get_monthly_first_dates(f"{codes_dict['1000']['last_date'].strftime('%Y%m')}01", date_tdy)
     print('TW new dates list:\n', tw_new_dates_lt)
     rng = random.default_rng()
     for tw_date in tw_new_dates_lt:
@@ -220,11 +222,11 @@ def train(date_tdy, tz_):
         try:
             res = requests.get(OHLC_url, headers=hd, timeout=(3, 10))
             res.raise_for_status()
-            jdata = jloads(res.text)
+            jdata = res.json()
             tw_ohlc = jdata['data']
             tw_fields = jdata['fields']
             if jdata['stat'] == 'OK' and tw_fields == ["日期", "開盤指數", "最高指數", "最低指數", "收盤指數"] and len(tw_ohlc) != 0:
-                tw_new_data.extend[tw_ohlc]
+                tw_new_data.extend(tw_ohlc)
             else:
                 raise Exception('taiex OHLC stat:', jdata['stat'], '\n欄位(field):', tw_fields, '\nOHLC data:', tw_ohlc)
         except Exception as err:
@@ -234,7 +236,7 @@ def train(date_tdy, tz_):
     print('TW new data:\n' , tw_new_data)
     tw_new_df = DataFrame(tw_new_data, columns=['date', 'open', 'high', 'low', 'close'])
     print('TW new df:\n', tw_new_df, type(tw_new_df))
-    if len(tw_new_df) > 0:
+    if tw_new_df.shape[0] > 0:
         # 3.1 處理民國年轉西元年 ('115/03/01' -> '2026/03/01')
         tw_new_df['date'] = tw_new_df['date'].apply(
             lambda x: str(int(x.split('/')[0]) + 1911) + '/' + x.split('/')[1] + '/' + x.split('/')[2]
@@ -257,7 +259,7 @@ def train(date_tdy, tz_):
     codes_dict['nq']['df'] = get_nq_data(codes_dict['nq']['df'], codes_dict['nq']['last_date'])
     for code_index in codes_dict:
         upload_data(dbx, codes_dict[code_index]['local'], codes_dict[code_index]['dbx'])
-    tw_mon_df = convert_to_monthly_df(codes_dict['1000']['df'])
+    tw_mon_df = convert_to_monthly_df(tw_all_df)
     sma55 = tw_mon_df['close'].tail(55).mean()
     bias55 = tw_all_df['close'].iloc[-1] / sma55 - 1
     if (bias55 > 0) & (bias55 <= 0.1):
