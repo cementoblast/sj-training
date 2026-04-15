@@ -213,6 +213,7 @@ def train(date_tdy, tz_):
         last_date = index_df['date'].max()
         codes_dict[index_code]['last_date'] = last_date
     tw_new_dates_lt = get_monthly_first_dates(f"{last_date.strftime('%Y%m')}01", date_tdy)
+    print('TW new dates list:\n', tw_new_dates_lt)
     rng = random.default_rng()
     for tw_date in tw_new_dates_lt:
         OHLC_url = f"https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=json&date={tw_date}"
@@ -230,8 +231,10 @@ def train(date_tdy, tz_):
             print(f"Failed to get the data of {tw_date} with the error of {err}")
         random_float = rng.uniform(2, 5)
         sleep(random_float)
+    print('TW new data:\n' , tw_new_data)
     tw_new_df = DataFrame(tw_new_data, columns=['date', 'open', 'high', 'low', 'close'])
-    if not tw_new_df.empty:
+    print('TW new df:\n', tw_new_df, type(tw_new_df))
+    if len(tw_new_df) > 0:
         # 3.1 處理民國年轉西元年 ('115/03/01' -> '2026/03/01')
         tw_new_df['date'] = tw_new_df['date'].apply(
             lambda x: str(int(x.split('/')[0]) + 1911) + '/' + x.split('/')[1] + '/' + x.split('/')[2]
@@ -246,6 +249,7 @@ def train(date_tdy, tz_):
         # 步驟 5：去除重複項並排序 (保護機制：避免日期區間重疊導致資料重複)
         tw_all_df = tw_all_df.drop_duplicates(subset = ['date'], keep = 'last')
         tw_all_df = tw_all_df.sort_values(by = 'date').reset_index(drop = True)
+        print('TW all df:\n', tw_all_df)
         codes_dict['1000']['df'] = tw_all_df
         print("Merged TW data")
     else:
@@ -253,7 +257,7 @@ def train(date_tdy, tz_):
     codes_dict['nq']['df'] = get_nq_data(codes_dict['nq']['df'], codes_dict['nq']['last_date'])
     for code_index in codes_dict:
         upload_data(dbx, codes_dict[code_index]['local'], codes_dict[code_index]['dbx'])
-    tw_mon_df = convert_to_monthly_df(tw_all_df)
+    tw_mon_df = convert_to_monthly_df(codes_dict['1000']['df'])
     sma55 = tw_mon_df['close'].tail(55).mean()
     bias55 = tw_all_df['close'].iloc[-1] / sma55 - 1
     if (bias55 > 0) & (bias55 <= 0.1):
