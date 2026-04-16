@@ -77,6 +77,27 @@ def convert_to_monthly_df(input_df: DataFrame) -> DataFrame:
     ).tail(1).copy()
     monthly_df = monthly_df[['date', 'close']]
     return monthly_df.reset_index(drop=True)
+def get_tw_OHLC(OHLC_url: str, tw_date: str, try_count: int):
+    rng = random.default_rng()
+    try:
+        res = requests.get(OHLC_url, headers=hd, timeout=(3, 10))
+        res.raise_for_status()
+        jdata = res.json()
+        tw_ohlc = jdata['data']
+        tw_fields = jdata['fields']
+        if jdata['stat'] == 'OK' and tw_fields == ["日期", "開盤指數", "最高指數", "最低指數", "收盤指數"] and len(tw_ohlc) != 0:
+            return tw_ohlc
+        else:
+            raise Exception('taiex OHLC stat:', jdata['stat'], '\n欄位(field):', tw_fields, '\nOHLC data:', tw_ohlc)
+    except Exception as err:
+        print(f"Failed to get the data of {tw_date} with the error of {err}")
+        if try_count < 10:
+            random_float = rng.uniform(60 + try_count * 30, 75 + try_count * 30)
+            sleep(random_float)
+            try_count += 1
+            return get_tw_OHLC(OHLC_url, tw_date, try_count)
+        else:
+            raise ValueError('Cannot access TW data after 10 trials')
 def train(date_tdy, tz_):
     def upload_data(dbx, local_file_path, dropbox_path):
         with open(local_file_path, "rb") as f:
@@ -219,19 +240,8 @@ def train(date_tdy, tz_):
     rng = random.default_rng()
     for tw_date in tw_new_dates_lt:
         OHLC_url = f"https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=json&date={tw_date}"
-        try:
-            res = requests.get(OHLC_url, headers=hd, timeout=(3, 10))
-            res.raise_for_status()
-            jdata = res.json()
-            tw_ohlc = jdata['data']
-            tw_fields = jdata['fields']
-            if jdata['stat'] == 'OK' and tw_fields == ["日期", "開盤指數", "最高指數", "最低指數", "收盤指數"] and len(tw_ohlc) != 0:
-                tw_new_data.extend(tw_ohlc)
-            else:
-                raise Exception('taiex OHLC stat:', jdata['stat'], '\n欄位(field):', tw_fields, '\nOHLC data:', tw_ohlc)
-        except Exception as err:
-            print(f"Failed to get the data of {tw_date} with the error of {err}")
-        random_float = rng.uniform(2, 5)
+        tw_new_data.extend(get_tw_OHLC(OHLC_url, tw_date, 0))
+        random_float = rng.uniform(25, 40)
         sleep(random_float)
     tw_new_df = DataFrame(tw_new_data, columns=['date', 'open', 'high', 'low', 'close'])
     if tw_new_df.shape[0] > 0:
