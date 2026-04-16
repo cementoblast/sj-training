@@ -95,6 +95,7 @@ def get_tw_OHLC(OHLC_url: str, tw_date: str, try_count: int):
             random_float = rng.uniform(60 + try_count * 30, 75 + try_count * 30)
             sleep(random_float)
             try_count += 1
+            print(f'Try again, try_count: {try_count}')
             return get_tw_OHLC(OHLC_url, tw_date, try_count)
         else:
             raise ValueError('Cannot access TW data after 10 trials')
@@ -237,11 +238,11 @@ def train(date_tdy, tz_):
     tw_all_df = codes_dict['1000']['df'].copy()
     tw_new_dates_lt = get_monthly_first_dates(f"{codes_dict['1000']['last_date'].strftime('%Y%m')}01", date_tdy)
     #print('TW new dates list:\n', tw_new_dates_lt)
-    rng = random.default_rng()
     for tw_date in tw_new_dates_lt:
         OHLC_url = f"https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=json&date={tw_date}"
         tw_new_data.extend(get_tw_OHLC(OHLC_url, tw_date, 0))
-        random_float = rng.uniform(25, 40)
+        rng = random.default_rng()
+        random_float = rng.uniform(30, 40)
         sleep(random_float)
     tw_new_df = DataFrame(tw_new_data, columns=['date', 'open', 'high', 'low', 'close'])
     if tw_new_df.shape[0] > 0:
