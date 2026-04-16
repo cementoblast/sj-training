@@ -233,9 +233,7 @@ def train(date_tdy, tz_):
             print(f"Failed to get the data of {tw_date} with the error of {err}")
         random_float = rng.uniform(2, 5)
         sleep(random_float)
-    print('TW new data:\n' , tw_new_data)
     tw_new_df = DataFrame(tw_new_data, columns=['date', 'open', 'high', 'low', 'close'])
-    print('TW new df:\n', tw_new_df, type(tw_new_df))
     if tw_new_df.shape[0] > 0:
         # 3.1 處理民國年轉西元年 ('115/03/01' -> '2026/03/01')
         tw_new_df['date'] = tw_new_df['date'].apply(
@@ -251,14 +249,15 @@ def train(date_tdy, tz_):
         # 步驟 5：去除重複項並排序 (保護機制：避免日期區間重疊導致資料重複)
         tw_all_df = tw_all_df.drop_duplicates(subset = ['date'], keep = 'last')
         tw_all_df = tw_all_df.sort_values(by = 'date').reset_index(drop = True)
-        print('TW all df:\n', tw_all_df)
         codes_dict['1000']['df'] = tw_all_df
+        codes_dict['1000']['df'].to_csv(codes_dict['1000']['local'], index = False)
         print("Merged TW data")
     else:
         print("No new TW data")
     codes_dict['nq']['df'] = get_nq_data(codes_dict['nq']['df'], codes_dict['nq']['last_date'])
-    for code_index in codes_dict:
-        upload_data(dbx, codes_dict[code_index]['local'], codes_dict[code_index]['dbx'])
+    codes_dict['nq']['df'].to_csv(codes_dict['nq']['local'], index = False)
+    for index_code in codes_dict:
+        upload_data(dbx, codes_dict[index_code]['local'], codes_dict[index_code]['dbx'])
     tw_mon_df = convert_to_monthly_df(tw_all_df)
     sma55 = tw_mon_df['close'].tail(55).mean()
     bias55 = tw_all_df['close'].iloc[-1] / sma55 - 1
