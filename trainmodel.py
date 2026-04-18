@@ -5,6 +5,8 @@ from time import sleep
 from math import floor
 from pandas import DataFrame, read_csv, to_datetime, concat, set_option, date_range
 from numpy import random
+from bs4 import BeautifulSoup as BS
+import re
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -99,7 +101,50 @@ def get_tw_OHLC(OHLC_url: str, tw_date: str, try_count: int):
             return get_tw_OHLC(OHLC_url, tw_date, try_count)
         else:
             raise ValueError('Cannot access TW data after 10 trials')
-def train(date_tdy, tz_):
+def is_tw_market_open(time_now: datetime) -> bool:
+    # 1. 取得現在的台灣時間 (UTC+8)，格式為 YYYYMMDD
+    today_str = time_now.strftime("%Y%m%d")
+    print(f'Today: {today_str}')
+    # 2. 證交所即時報價 API (指定抓取 tse_t00.tw 也就是大盤加權指數)
+    tw_info_url = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_t00.tw&json=1&delay=0"
+    try:
+        # 設定 timeout，防止 API 臨時無回應卡死程式
+        response = requests.get(tw_info_url, headers = hd, timeout = 10)
+        data = response.json()
+        # 3. 從回傳的 JSON 中萃取「交易所紀錄的最新交易日 (d)」
+        tw_trade_dt = data['msgArray'][0]['d']
+        print('tw trade dt:', tw_trade_dt)
+        # 4. 比對日期
+        if tw_trade_dt == today_str:
+            print(f"✅Open: tw_trade_dt == today_str")
+            return True
+        else:
+            print(f"⏸️Closed: tw_trade_dt != today_str")
+            return False
+    except Exception as err:
+        print(f"⚠️TW info url shows messages with errors: {err}")
+    try:
+        yahoo_url = "https://tw.stock.yahoo.com/quote/^TWII"
+        response = requests.get(yahoo_url, headers = hd, timeout = 10)
+
+        if response.status_code == 200:
+            soup = BS(response.text, 'html.parser')
+            # 尋找頁面中包含 "資料時間" 的文字區塊 (例如：資料時間：2026/04/18 08:30)
+            time_element = soup.find(string=re.compile("資料時間"))
+            today_str_yahoo = time_now.strftime("%Y/%m/%d")
+            if time_element:
+                # 判斷今天的日期字串 (例如 "2026/04/18") 是否包含在裡面
+                if today_str_yahoo in time_element:
+                    print(f"✅Open, according to TW info from Yahoo ({time_element})")
+                    return True
+                else:
+                    print(f"⏸️Closed, according to TW info from Yahoo ({time_element})")
+                    return False
+            else:
+                print("⚠️Failed to get the time tag in Yahoo")
+    except Exception as err:
+         print(f"⚠️Yahoo URL shows messages with errors: {err}")
+def train(date_tdy):
     def upload_data(dbx, local_file_path, dropbox_path):
         with open(local_file_path, "rb") as f:
             try:
@@ -285,22 +330,24 @@ def train(date_tdy, tz_):
             f.write(base64.b64decode(getenv('SJ_CERT_BASE64')))
         result = api.activate_ca(ca_path = pfx_path, ca_passwd = getenv('SJ_CERT_PASSWORD'), person_id = getenv('SJ_ID'))
         print("ca:", result)
-        balance = api.account_balance(timeout=100000)
-        if balance.errmsg != '':
-            print("Account error message:", balance.errmsg)
-            raise Exception("There is an error message in the account.")
-        settle_lt = api.settlements(timeout = 100000)
-        cash = Decimal(balance.acc_balance + settle_lt[1].amount + settle_lt[2].amount)
-        trade_lt, minimal_order_val, pos_qty = api.list_trades(), 702, Decimal(0)
-        pos_lt = api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout = 100000)
-        for pos in pos_lt:
-            if pos.code == stk_code:
-                pos_qty = Decimal(pos.quantity)
-
-        print(f"cash:{cash}", "trade lt:", trade_lt, f"shares of {stk_code}:", pos_qty)
-        tse_dt = datetime.fromtimestamp(int(str(api.snapshots([api.Contracts.Indexs.TSE["001"]])[0].ts)[:10]), tz = tz_)
-        print("tse datetime:", tse_dt)
-        if tse_dt >= date_tdy:
+        tse_contract = api.Contracts.Indexs.TSE["001"]
+        tse_update_dt = tse_contract.update_date
+        print(tse_update_dt, type(tse_update_dt))
+        if is_tw_market_open(date_tdy):
+            balance = api.account_balance(timeout=100000)
+            if balance.errmsg != '':
+                print("Account error message:", balance.errmsg)
+                raise Exception("There is an error message in the account.")
+            settle_lt = api.settlements(timeout = 100000)
+            cash = Decimal(balance.acc_balance + settle_lt[1].amount + settle_lt[2].amount)
+            trade_lt, minimal_order_val, pos_qty = api.list_trades(), 702, Decimal(0)
+            pos_lt = api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout = 100000)
+            for pos in pos_lt:
+                if pos.code == stk_code:
+                    pos_qty = Decimal(pos.quantity)
+            print(f"cash:{cash}", "trade lt:", trade_lt, f"shares of {stk_code}:", pos_qty)
+            #tse_dt = datetime.fromtimestamp(int(str(api.snapshots([api.Contracts.Indexs.TSE["001"]])[0].ts)[:10]), tz = tz_)
+            #print("tse datetime:", tse_dt)
             stk = api.Contracts.Stocks[stk_code]
             snap_data = api.snapshots([stk])[0]
             open_pr, buy_pr, sell_pr, avg_pr = round(Decimal(snap_data.open), 2), round(Decimal(snap_data.buy_price), 2), round(Decimal(snap_data.sell_price), 2), round(Decimal(snap_data.average_price), 2)
@@ -309,9 +356,10 @@ def train(date_tdy, tz_):
             #trading(trader, trade_action)
             api.logout()
             print('Log out')
+            remove(pfx_path)
         else:
-            print("Not open")
-        remove(pfx_path)
+            api.logout()
+            print('Not open')
     else:
         print(f"Bias 55 is about {round(bias55 * 100, 2)}%, no need for real-time monitoring")
 class Trader:
@@ -515,8 +563,7 @@ fold_dict = {"Common": Decimal(1000),
 stk_code = '00675L'
 hd = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36"}
 if __name__ == "__main__":
-    tz_ = timezone(timedelta(hours=8))
     date_tdy = datetime.now()
     print(date_tdy)
     print('Start training model')
-    train(date_tdy, tz_)
+    train(date_tdy)
