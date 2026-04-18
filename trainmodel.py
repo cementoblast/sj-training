@@ -112,10 +112,10 @@ def is_tw_market_open(time_now: datetime) -> bool:
         print('tw trade dt:', tw_trade_dt)
         if tw_trade_dt == today_str:
             print(f"✅Open: tw_trade_dt == today_str")
-            #return True
+            return True
         else:
             print(f"⏸️Closed: tw_trade_dt != today_str")
-            #return False
+            return False
     except Exception as err:
         print(f"⚠️TW info url shows messages with errors: {err}")
     try:
@@ -130,10 +130,10 @@ def is_tw_market_open(time_now: datetime) -> bool:
             if time_element:
                 # 判斷今天的日期字串 (例如 "2026/04/18") 是否包含在裡面
                 if today_str_yahoo in time_element:
-                    print(f"✅Open, according to TW info from Yahoo ({time_element})")
+                    print(f"✅Open, according to TW info from Yahoo")
                     return True
                 else:
-                    print(f"⏸️Closed, according to TW info from Yahoo ({time_element})")
+                    print(f"⏸️Closed, according to TW info from Yahoo")
                     return False
             else:
                 print("⚠️Failed to get the time tag in Yahoo")
@@ -330,8 +330,7 @@ def train(date_tdy):
         tse_contract = api.Contracts.Indexs.TSE["001"]
         tse_dt = datetime.fromtimestamp(int(str(api.snapshots([tse_contract])[0].ts)[:10]))
         print("tse datetime:", tse_dt)
-
-        if is_tw_market_open(date_tdy):
+        if tse_dt > date_tdy:
             balance = api.account_balance(timeout=100000)
             if balance.errmsg != '':
                 print("Account error message:", balance.errmsg)
@@ -559,7 +558,7 @@ fold_dict = {"Common": Decimal(1000),
 stk_code = '00675L'
 hd = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36"}
 if __name__ == "__main__":
-    date_tdy = datetime.now()
-    print(date_tdy)
+    date_tdy = datetime.now() + timedelta(hours = 8)
+    print('tw datetime now:', date_tdy)
     print('Start training model')
     train(date_tdy)
