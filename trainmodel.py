@@ -334,6 +334,9 @@ def train(date_tdy):
         tse_update_dt = tse_contract.update_date
         print('tse update date:', tse_update_dt, type(tse_update_dt))
         print('tse contract:', tse_contract)
+        tse_dt = datetime.fromtimestamp(int(str(api.snapshots(tse_contract)[0].ts)[:10]))
+        print("tse datetime:", tse_dt)
+
         if is_tw_market_open(date_tdy):
             balance = api.account_balance(timeout=100000)
             if balance.errmsg != '':
@@ -347,8 +350,6 @@ def train(date_tdy):
                 if pos.code == stk_code:
                     pos_qty = Decimal(pos.quantity)
             print(f"cash:{cash}", "trade lt:", trade_lt, f"shares of {stk_code}:", pos_qty)
-            #tse_dt = datetime.fromtimestamp(int(str(api.snapshots([api.Contracts.Indexs.TSE["001"]])[0].ts)[:10]), tz = tz_)
-            #print("tse datetime:", tse_dt)
             stk = api.Contracts.Stocks[stk_code]
             snap_data = api.snapshots([stk])[0]
             open_pr, buy_pr, sell_pr, avg_pr = round(Decimal(snap_data.open), 2), round(Decimal(snap_data.buy_price), 2), round(Decimal(snap_data.sell_price), 2), round(Decimal(snap_data.average_price), 2)
