@@ -332,7 +332,8 @@ def train(date_tdy):
         print("ca:", result)
         tse_contract = api.Contracts.Indexs.TSE["001"]
         tse_update_dt = tse_contract.update_date
-        print(tse_update_dt, type(tse_update_dt))
+        print('tse update date:', tse_update_dt, type(tse_update_dt))
+        print('tse contract:', tse_contract)
         if is_tw_market_open(date_tdy):
             balance = api.account_balance(timeout=100000)
             if balance.errmsg != '':
