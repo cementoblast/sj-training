@@ -272,7 +272,7 @@ def train(date_tdy, tz_):
     tw_mon_df = convert_to_monthly_df(tw_all_df)
     sma55 = tw_mon_df['close'].tail(55).mean()
     bias55 = tw_all_df['close'].iloc[-1] / sma55 - 1
-    if (bias55 > 0) & (bias55 <= 0.1):
+    if (bias55 > 0) & (bias55 <= 1):
         print(f"Bias 55 is about {round(bias55 * 100, 2)}%, start real-time monitoring")
         close_t = datetime(date_tdy.year, date_tdy.month, date_tdy.day, 5)
         last_trade_t = datetime(date_tdy.year, date_tdy.month, date_tdy.day, 5)
@@ -298,20 +298,19 @@ def train(date_tdy, tz_):
                 pos_qty = Decimal(pos.quantity)
 
         print(f"cash:{cash}", "trade lt:", trade_lt, f"shares of {stk_code}:", pos_qty)
-        if cash >= minimal_order_val:
-            tse_dt = datetime.fromtimestamp(int(str(api.snapshots([api.Contracts.Indexs.TSE["001"]])[0].ts)[:10]), tz = tz_)
-            print("tse datetime:", tse_dt)
-            if tse_dt >= date_tdy:
-                stk = api.Contracts.Stocks[stk_code]
-                snap_data = api.snapshots([stk])[0]
-                open_pr, buy_pr, sell_pr, avg_pr = round(Decimal(snap_data.open), 2), round(Decimal(snap_data.buy_price), 2), round(Decimal(snap_data.sell_price), 2), round(Decimal(snap_data.average_price), 2)
-                trade_action = 'Buy'
-                trader = Trader(open_pr, buy_pr, sell_pr, avg_pr, trade_action, pos_qty, cash, api)
-                #trading(trader, trade_action)
-                api.logout()
-                print('Log out')
-            else:
-                print("Not open")
+        tse_dt = datetime.fromtimestamp(int(str(api.snapshots([api.Contracts.Indexs.TSE["001"]])[0].ts)[:10]), tz = tz_)
+        print("tse datetime:", tse_dt)
+        if tse_dt >= date_tdy:
+            stk = api.Contracts.Stocks[stk_code]
+            snap_data = api.snapshots([stk])[0]
+            open_pr, buy_pr, sell_pr, avg_pr = round(Decimal(snap_data.open), 2), round(Decimal(snap_data.buy_price), 2), round(Decimal(snap_data.sell_price), 2), round(Decimal(snap_data.average_price), 2)
+            trade_action = 'Buy'
+            trader = Trader(open_pr, buy_pr, sell_pr, avg_pr, trade_action, pos_qty, cash, api)
+            #trading(trader, trade_action)
+            api.logout()
+            print('Log out')
+        else:
+            print("Not open")
         remove(pfx_path)
     else:
         print(f"Bias 55 is about {round(bias55 * 100, 2)}%, no need for real-time monitoring")
