@@ -102,25 +102,20 @@ def get_tw_OHLC(OHLC_url: str, tw_date: str, try_count: int):
         else:
             raise ValueError('Cannot access TW data after 10 trials')
 def is_tw_market_open(time_now: datetime) -> bool:
-    # 1. 取得現在的台灣時間 (UTC+8)，格式為 YYYYMMDD
     today_str = time_now.strftime("%Y%m%d")
     print(f'Today: {today_str}')
-    # 2. 證交所即時報價 API (指定抓取 tse_t00.tw 也就是大盤加權指數)
     tw_info_url = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_t00.tw&json=1&delay=0"
     try:
-        # 設定 timeout，防止 API 臨時無回應卡死程式
         response = requests.get(tw_info_url, headers = hd, timeout = 10)
         data = response.json()
-        # 3. 從回傳的 JSON 中萃取「交易所紀錄的最新交易日 (d)」
         tw_trade_dt = data['msgArray'][0]['d']
         print('tw trade dt:', tw_trade_dt)
-        # 4. 比對日期
         if tw_trade_dt == today_str:
             print(f"✅Open: tw_trade_dt == today_str")
-            return True
+            #return True
         else:
             print(f"⏸️Closed: tw_trade_dt != today_str")
-            return False
+            #return False
     except Exception as err:
         print(f"⚠️TW info url shows messages with errors: {err}")
     try:
@@ -142,8 +137,10 @@ def is_tw_market_open(time_now: datetime) -> bool:
                     return False
             else:
                 print("⚠️Failed to get the time tag in Yahoo")
+
     except Exception as err:
          print(f"⚠️Yahoo URL shows messages with errors: {err}")
+
 def train(date_tdy):
     def upload_data(dbx, local_file_path, dropbox_path):
         with open(local_file_path, "rb") as f:
@@ -331,13 +328,10 @@ def train(date_tdy):
         result = api.activate_ca(ca_path = pfx_path, ca_passwd = getenv('SJ_CERT_PASSWORD'), person_id = getenv('SJ_ID'))
         print("ca:", result)
         tse_contract = api.Contracts.Indexs.TSE["001"]
-        tse_update_dt = tse_contract.update_date
-        print('tse update date:', tse_update_dt, type(tse_update_dt))
-        print('tse contract:', tse_contract)
         tse_dt = datetime.fromtimestamp(int(str(api.snapshots([tse_contract])[0].ts)[:10]))
         print("tse datetime:", tse_dt)
 
-        if not is_tw_market_open(date_tdy):
+        if is_tw_market_open(date_tdy):
             balance = api.account_balance(timeout=100000)
             if balance.errmsg != '':
                 print("Account error message:", balance.errmsg)
