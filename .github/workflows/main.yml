@@ -26,8 +26,8 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv
-          uv pip install "shioaji[speed]" pandas numpy requests dropbox
-      - name: Run Shioaji Script
+          uv pip install "shioaji[speed]" pandas numpy requests dropbox beautifulsoup4
+      - name: Run Training Script
         env:
           SJ_API_KEY: ${{ secrets.SJ_API_KEY }}
           SJ_SECRET_KEY: ${{ secrets.SJ_SECRET_KEY }}
