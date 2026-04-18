@@ -334,7 +334,7 @@ def train(date_tdy):
         tse_update_dt = tse_contract.update_date
         print('tse update date:', tse_update_dt, type(tse_update_dt))
         print('tse contract:', tse_contract)
-        tse_dt = datetime.fromtimestamp(int(str(api.snapshots(tse_contract)[0].ts)[:10]))
+        tse_dt = datetime.fromtimestamp(int(str(api.snapshots([tse_contract])[0].ts)[:10]), tz = timezone(timedelta(hours = 8)))
         print("tse datetime:", tse_dt)
 
         if is_tw_market_open(date_tdy):
